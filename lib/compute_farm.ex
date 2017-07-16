@@ -1,12 +1,7 @@
 defmodule ComputeFarm do
 
-  def factorial(0), do: 1
-  def factorial(n), do: n * factorial(n-1)
-
-  def finish(pid, name) do
-    IO.puts("Wait complete")
-    ComputeFarm.server(pid, name, %{register: false})
-  end
+  defp factorial(0), do: 1
+  defp factorial(n), do: n * factorial(n-1)
 
   def server(dispatcher_pid, name, options \\ %{register: true}) do
     if options.register do
