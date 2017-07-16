@@ -5,7 +5,7 @@ defmodule ComputeFarm do
 
   def server(dispatcher_pid, name, options \\ %{register: true}) do
     if options.register do
-      send(dispatcher_pid, {:register, %{name: name, pid: self()}})
+      send(dispatcher_pid, {:register, %{name: name, pid: self(), status: :avail}})
     end
 
     receive do 
@@ -23,7 +23,7 @@ defmodule ComputeFarm do
     servers = receive do
       :servers ->
         server_string = Map.values(servers)
-                        |> Enum.map(fn elem -> elem.name end)
+                        |> Enum.map(fn elem -> "#{elem.name}: #{elem.status}" end)
                         |> Enum.join(", ")
 
         IO.puts("Available server list: #{server_string}")
@@ -34,19 +34,28 @@ defmodule ComputeFarm do
         Map.put(servers, name, server_info)
 
       {:dispatch, server_name} ->
-        case Map.get(servers, server_name) do
+        server_info = Map.get(servers, server_name)
+        server_info = case server_info do
           nil ->
             IO.puts("Cannot find server #{server_name}")
+            server_info
+
           %{name: name, pid: pid} ->
             IO.puts("Sending to #{name}")
             send(pid, "message")
+            %{server_info | :status => :busy}
+
           _ ->
             IO.puts("Unexpected condition. Aborting")
+            server_info
         end
-        servers
+        %{servers | server_name => server_info}
 
-      {:result, %{server: server, value: value, result: result}} ->
+      {:result, %{server: server}} ->
         IO.puts("Received result from #{server}")
+        server_info = Map.get(servers, server)
+        server_info = %{server_info | :status => :avail}
+        %{servers | server => server_info}
 
       _ ->
         IO.puts("Unknown command")
