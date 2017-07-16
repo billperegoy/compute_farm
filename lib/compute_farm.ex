@@ -1,11 +1,25 @@
 defmodule ComputeFarm do
+
+  def factorial(0), do: 1
+  def factorial(n), do: n * factorial(n-1)
+
+  def finish(pid, name) do
+    IO.puts("Wait complete")
+    ComputeFarm.server(pid, name, %{register: false})
+  end
+
   def server(dispatcher_pid, name, options \\ %{register: true}) do
     if options.register do
-      send(dispatcher_pid, {:register, %{name: name, pid: self}})
+      send(dispatcher_pid, {:register, %{name: name, pid: self()}})
     end
 
     receive do 
       message -> IO.puts("Server #{name} received #{message}")
+      value = 100_000 * Enum.random(1..5)
+      IO.puts("Computing factorial of #{value}...")
+      result = factorial(value)
+      IO.puts("Computation complete")
+      send(dispatcher_pid, {:result, %{server: name, value: value, result: result}})
       ComputeFarm.server(dispatcher_pid, name, %{register: false})
     end
   end
@@ -29,12 +43,15 @@ defmodule ComputeFarm do
           nil ->
             IO.puts("Cannot find server #{server_name}")
           %{name: name, pid: pid} ->
-            IO.puts("Senidng to #{name}")
+            IO.puts("Sending to #{name}")
             send(pid, "message")
           _ ->
             IO.puts("Unexpected condition. Aborting")
         end
         servers
+
+      {:result, %{server: server, value: value, result: result}} ->
+        IO.puts("Received result from #{server}")
 
       _ ->
         IO.puts("Unknown command")
