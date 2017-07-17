@@ -9,6 +9,13 @@ defmodule ComputeFarm do
     |> Enum.map(fn elem -> elem.name end)
   end
 
+  def pop_queue(queue) do
+    reversed_queue = Enum.reverse(queue)
+    job = List.first(reversed_queue)
+    queue = reversed_queue |> Enum.drop(1) |> Enum.reverse
+    %{job: job, queue: queue}
+  end
+
   defp dispatch(servers, server_name) do
     server_info = Map.get(servers, server_name)
     case server_info do
@@ -64,9 +71,17 @@ defmodule ComputeFarm do
 
       {:result, %{server: server}} ->
         IO.puts("Received result from #{server}")
-        server_info = Map.get(servers, server)
-        server_info = %{server_info | :status => :avail}
-        {%{servers | server => server_info}, queue}
+
+        # If there are items on the queue, pop the last one and dispatch it
+        if length(queue) > 0 do
+          %{job: job, queue: queue} = pop_queue(queue)
+          IO.puts("Dispatching job: #{job.name}")
+          {dispatch(servers, server), queue}
+        else
+          server_info = Map.get(servers, server)
+          server_info = %{server_info | :status => :avail}
+          {%{servers | server => server_info}, queue}
+        end
 
       {:queue, job} ->
         {servers, queue} = case available_servers(servers) do
@@ -75,7 +90,6 @@ defmodule ComputeFarm do
 
           list ->
             server_name = List.first(list)
-            # FIXME - server not getting marked :busy
             {dispatch(servers, server_name), queue}
         end
         {servers, queue}
