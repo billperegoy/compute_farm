@@ -64,7 +64,13 @@ defmodule ComputeFarm do
 
       {:register, %{name: name}=server_info} ->
         IO.puts("Registered new server: #{server_info.name}")
-        {Map.put(servers, name, server_info), queue}
+        if length(queue) > 0 do
+          %{job: job, queue: queue} = pop_queue(queue)
+          IO.puts("Dispatching job: #{job.name}")
+          {dispatch(Map.put(servers, name, server_info), name), queue}
+        else
+          {Map.put(servers, name, server_info), queue}
+        end
 
       {:dispatch, server_name} ->
         {dispatch(servers, server_name), queue}
