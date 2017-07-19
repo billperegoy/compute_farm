@@ -3,12 +3,50 @@ defmodule ComputeFarm do
   defp factorial(0), do: 1
   defp factorial(n), do: n * factorial(n-1)
 
+  @doc ~S"""
+
+      iex> servers = %{"server_1" => %{name: "server_1", pid: 123, status: :avail},
+      ...>             "server_2" => %{name: "server_2", pid: 456, status: :busy},
+      ...>             "server_3" => %{name: "server_3", pid: 789, status: :avail}
+      ...>            }
+      iex> ComputeFarm.available_servers(servers)
+      ["server_1", "server_3"]
+
+      iex> servers = %{"server_1" => %{name: "server_1", pid: 123, status: :busy},
+      ...>             "server_2" => %{name: "server_2", pid: 456, status: :busy},
+      ...>             "server_3" => %{name: "server_3", pid: 789, status: :busy}
+      ...>           }
+      iex> ComputeFarm.available_servers(servers)
+      []
+
+      iex> servers = %{"server_1" => %{name: "server_1", pid: 123, status: :avail},
+      ...>            "server_2" => %{name: "server_2", pid: 456, status: :avail},
+      ...>            "server_3" => %{name: "server_3", pid: 789, status: :avail}
+      ...>          }
+      iex> ComputeFarm.available_servers(servers)
+      ["server_1", "server_2", "server_3"]
+
+  """
   def available_servers(servers) do
     Map.values(servers)
     |> Enum.filter(fn elem -> elem.status == :avail end)
     |> Enum.map(fn elem -> elem.name end)
   end
 
+  @doc ~S"""
+  Converts a list reresenting a queue and returns the popped last element along with the remaining queue.
+
+  ## Examples
+      iex> ComputeFarm.pop_queue(["a", "b", "c"])
+      %{job: "c", queue: ["a", "b"]}
+
+      iex> ComputeFarm.pop_queue(["a"])
+      %{job: "a", queue: []}
+
+      iex> ComputeFarm.pop_queue([])
+      %{job: nil, queue: []}
+
+  """
   def pop_queue(queue) do
     reversed_queue = Enum.reverse(queue)
     job = List.first(reversed_queue)
@@ -71,9 +109,6 @@ defmodule ComputeFarm do
         else
           {Map.put(servers, name, server_info), queue}
         end
-
-      {:dispatch, server_name} ->
-        {dispatch(servers, server_name), queue}
 
       {:result, %{server: server}} ->
         IO.puts("Received result from #{server}")
